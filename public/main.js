@@ -17,8 +17,14 @@ let refreshTimer = null;
 queryInput.value = 'up';
 
 const chartEl = document.getElementById('chart');
-const chart = echarts.init(chartEl);
-window.addEventListener('resize', () => chart.resize());
+let chart = null;
+function ensureChart() {
+  if (!chart && window.echarts) {
+    chart = echarts.init(chartEl);
+    window.addEventListener('resize', () => chart && chart.resize());
+  }
+  return chart;
+}
 
 function setNowRange(preset) {
   const now = new Date();
@@ -80,7 +86,8 @@ function renderSeries(seriesList, title = '') {
     legend: { type: 'scroll' },
     series: seriesList,
   };
-  chart.setOption(option);
+  const c = ensureChart();
+  if (c) c.setOption(option);
 }
 
 async function runPrometheus() {
@@ -207,7 +214,8 @@ async function run() {
     renderSeries([], 'Error');
     console.error(err);
     const msg = (err && err.message) ? err.message : String(err);
-    chart.setOption({ title: { text: `Error: ${msg}` } });
+    const c = ensureChart();
+    if (c) c.setOption({ title: { text: `Error: ${msg}` } });
   }
 }
 
@@ -223,12 +231,9 @@ function setupAutoRefresh() {
 }
 
 // Event listeners
-sourceSelect.addEventListener('change', () => {
-  updateUiForSource();
-});
-rangeSelect.addEventListener('change', () => {
-  updateTimeRow();
-});
+sourceSelect.addEventListener('change', updateUiForSource);
+sourceSelect.addEventListener('input', updateUiForSource);
+rangeSelect.addEventListener('change', updateTimeRow);
 runBtn.addEventListener('click', async () => {
   await run();
   setupAutoRefresh();
