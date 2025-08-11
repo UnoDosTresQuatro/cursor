@@ -3,22 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Load tests results viewer</title>
+    <title>Load test Metrics Viewer</title>
     <link rel="stylesheet" href="/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   </head>
   <body>
     <div class="app">
       <header>
-        <h1>ECharts Metrics Viewer</h1>
+        <h1>Load test metrics viewer</h1>
       </header>
 
       <section class="controls">
         <div class="row">
           <label for="sourceSelect">Source</label>
           <select id="sourceSelect">
-            <option value="prometheus">Prometheus</option>
             <option value="clickhouse">ClickHouse</option>
+            <option value="prometheus">Prometheus</option>
           </select>
 
           <label for="rangeSelect">Range</label>
@@ -48,8 +48,8 @@
         </div>
 
         <div class="row">
-          <label id="queryLabel" for="queryInput">PromQL</label>
-          <textarea id="queryInput" rows="3" placeholder="up"></textarea>
+          <label id="queryLabel" for="queryInput">Query</label>
+          <textarea id="queryInput" rows="9" placeholder="up"></textarea>
         </div>
       </section>
 
@@ -58,7 +58,7 @@
       </section>
 
       <footer>
-        <span>Powered by LT team</span>
+        <span>Powered by Load team</span>
       </footer>
     </div>
 
