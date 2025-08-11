@@ -90,6 +90,26 @@ function renderSeries(seriesList, title = '') {
   if (c) c.setOption(option);
 }
 
+// Add: download current chart image
+const downloadBtn = document.getElementById('downloadBtn');
+function downloadChart(format = 'png') {
+  const c = ensureChart();
+  if (!c) return;
+  const dataURL = c.getDataURL({
+    type: format,
+    pixelRatio: 2,
+    backgroundColor: '#ffffff',
+    excludeComponents: [],
+  });
+  const link = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  link.href = dataURL;
+  link.download = `chart-${ts}.${format}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
 async function runPrometheus() {
   const query = queryInput.value.trim();
   if (!query) return;
@@ -219,6 +239,10 @@ runBtn.addEventListener('click', async () => {
   await run();
   setupAutoRefresh();
 });
+
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', () => downloadChart('png'));
+}
 
 refreshInput.addEventListener('change', setupAutoRefresh);
 
