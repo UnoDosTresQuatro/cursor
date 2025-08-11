@@ -26,6 +26,44 @@ function ensureChart() {
   return chart;
 }
 
+// Legend stats helpers
+let currentLegendStats = {};
+function formatStatNumber(value) {
+  if (value == null || Number.isNaN(value)) return 'N/A';
+  const abs = Math.abs(value);
+  if (abs >= 1000) return value.toFixed(0);
+  if (abs >= 10) return value.toFixed(2);
+  return value.toFixed(3);
+}
+function computeLegendStats(seriesList) {
+  const stats = {};
+  for (const s of seriesList) {
+    const data = Array.isArray(s.data) ? s.data : [];
+    let count = 0;
+    let sum = 0;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < data.length; i += 1) {
+      const y = Array.isArray(data[i]) ? Number(data[i][1]) : Number(data[i]);
+      if (Number.isFinite(y)) {
+        count += 1;
+        sum += y;
+        if (y > max) max = y;
+      }
+    }
+    let last = null;
+    for (let i = data.length - 1; i >= 0; i -= 1) {
+      const y = Array.isArray(data[i]) ? Number(data[i][1]) : Number(data[i]);
+      if (Number.isFinite(y)) { last = y; break; }
+    }
+    stats[s.name] = {
+      mean: count > 0 ? (sum / count) : null,
+      max: count > 0 ? max : null,
+      last: last,
+    };
+  }
+  return stats;
+}
+
 function setNowRange(preset) {
   const now = new Date();
   let start = new Date(now);
