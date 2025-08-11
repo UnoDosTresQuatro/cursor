@@ -231,6 +231,24 @@ function setupAutoRefresh() {
 }
 
 // Event listeners
+function interceptSelectProgrammaticChanges(select, onChange) {
+  const valueDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+  const indexDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
+  try {
+    Object.defineProperty(select, 'value', {
+      get() { return valueDesc.get.call(this); },
+      set(v) { valueDesc.set.call(this, v); onChange(); },
+      configurable: true,
+    });
+    Object.defineProperty(select, 'selectedIndex', {
+      get() { return indexDesc.get.call(this); },
+      set(v) { indexDesc.set.call(this, v); onChange(); },
+      configurable: true,
+    });
+  } catch {}
+}
+interceptSelectProgrammaticChanges(sourceSelect, updateUiForSource);
+
 sourceSelect.addEventListener('change', updateUiForSource);
 sourceSelect.addEventListener('input', updateUiForSource);
 rangeSelect.addEventListener('change', updateTimeRow);
