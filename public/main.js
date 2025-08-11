@@ -17,8 +17,14 @@ let refreshTimer = null;
 queryInput.value = 'up';
 
 const chartEl = document.getElementById('chart');
-const chart = echarts.init(chartEl);
-window.addEventListener('resize', () => chart.resize());
+let chart = null;
+function ensureChart() {
+  if (!chart && window.echarts) {
+    chart = echarts.init(chartEl);
+    window.addEventListener('resize', () => chart && chart.resize());
+  }
+  return chart;
+}
 
 function setNowRange(preset) {
   const now = new Date();
@@ -80,7 +86,8 @@ function renderSeries(seriesList, title = '') {
     legend: { type: 'scroll' },
     series: seriesList,
   };
-  chart.setOption(option);
+  const c = ensureChart();
+  if (c) c.setOption(option);
 }
 
 async function runPrometheus() {
@@ -113,34 +120,13 @@ function groupRowsBySeries(rows) {
   for (const row of rows) {
     const time = row.t ?? row.time ?? row.ts ?? row.timestamp;
     if (time == null) continue;
-    const tMillis = typeof time === 'number' ? time : Number(time);
+    const tMillis = typeof time === 'number' ? time : Date.parse(time);
 
-    const entries = Object.entries(row);
-
-    if (row.series != null && row.value != null) {
-      const seriesName = String(row.series);
+    if (row.value != null && String(row.status) !== "all") {
+      const seriesName = String(`{host=${row.host},request=${row.request},status=${row.status}}`);
       const value = Number(row.value);
       if (!groups.has(seriesName)) groups.set(seriesName, []);
       groups.get(seriesName).push([tMillis, value]);
-      continue;
-    }
-
-    const scalarKeys = entries
-      .filter(([k, v]) => k !== 't' && k !== 'time' && k !== 'ts' && k !== 'timestamp' && typeof v === 'number')
-      .map(([k]) => k);
-
-    if (scalarKeys.length === 0) {
-      const value = Number(row.value ?? row.v ?? 0);
-      const name = String(row.name ?? 'value');
-      if (!groups.has(name)) groups.set(name, []);
-      groups.get(name).push([tMillis, value]);
-    } else {
-      for (const key of scalarKeys) {
-        const value = Number(row[key]);
-        const seriesName = String(key);
-        if (!groups.has(seriesName)) groups.set(seriesName, []);
-        groups.get(seriesName).push([tMillis, value]);
-      }
     }
   }
   return Array.from(groups.entries()).map(([name, data]) => ({ name, data: data.sort((a,b)=>a[0]-b[0]) }));
@@ -178,12 +164,14 @@ async function runClickHouse() {
 function updateUiForSource() {
   if (sourceSelect.value === 'prometheus') {
     queryLabel.textContent = 'PromQL';
+    queryLabel.title = queryLabel.textContent;
     if (!queryInput.value || queryInput.value.trim().toLowerCase() === 'select 1') {
       queryInput.value = 'up';
     }
     stepInput.disabled = false;
   } else {
     queryLabel.textContent = 'ClickHouse SQL';
+    queryLabel.title = queryLabel.textContent;
     if (!queryInput.value || queryInput.value.trim().toLowerCase() === 'up') {
       queryInput.value = `-- Example: rows with columns t (ms), value, series\nSELECT\n  toUnixTimestamp64Milli(ts) AS t,\n  value,\n  'seriesA' AS series\nFROM some_metrics\nWHERE ts BETWEEN toDateTime64({{start}}/1000, 3) AND toDateTime64({{end}}/1000, 3)\nORDER BY ts`;
     }
@@ -207,7 +195,8 @@ async function run() {
     renderSeries([], 'Error');
     console.error(err);
     const msg = (err && err.message) ? err.message : String(err);
-    chart.setOption({ title: { text: `Error: ${msg}` } });
+    const c = ensureChart();
+    if (c) c.setOption({ title: { text: `Error: ${msg}` } });
   }
 }
 
@@ -222,13 +211,10 @@ function setupAutoRefresh() {
   }
 }
 
-// Event listeners
-sourceSelect.addEventListener('change', () => {
-  updateUiForSource();
-});
-rangeSelect.addEventListener('change', () => {
-  updateTimeRow();
-});
+
+sourceSelect.addEventListener('change', updateUiForSource);
+sourceSelect.addEventListener('input', updateUiForSource);
+rangeSelect.addEventListener('change', updateTimeRow);
 runBtn.addEventListener('click', async () => {
   await run();
   setupAutoRefresh();

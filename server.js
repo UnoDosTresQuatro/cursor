@@ -126,7 +126,7 @@ app.post('/api/clickhouse/query', async (req, res) => {
   } catch (error) {
     const status = error.response?.status || 500;
     res.status(status).json({
-      error: 'ClickHouse query failed',
+      error: `ClickHouse query failed with status ${status}`,
       details: error.response?.data || error.message,
     });
   }
