@@ -137,6 +137,7 @@ function renderSeries(seriesList, title = '') {
         return `${name}  [last=${formatStatNumber(s.last)}  max=${formatStatNumber(s.max)}  mean=${formatStatNumber(s.mean)}]`;
       }
     },
+    color: grafanaPalette,
     series: seriesList,
   };
   const c = ensureChart();
