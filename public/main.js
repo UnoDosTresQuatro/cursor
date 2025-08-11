@@ -26,6 +26,51 @@ function ensureChart() {
   return chart;
 }
 
+// Legend stats helpers
+let currentLegendStats = {};
+function formatStatNumber(value) {
+  if (value == null || Number.isNaN(value)) return 'N/A';
+  const abs = Math.abs(value);
+  if (abs >= 1000) return value.toFixed(0);
+  if (abs >= 10) return value.toFixed(2);
+  return value.toFixed(3);
+}
+function computeLegendStats(seriesList) {
+  const stats = {};
+  for (const s of seriesList) {
+    const data = Array.isArray(s.data) ? s.data : [];
+    let count = 0;
+    let sum = 0;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let i = 0; i < data.length; i += 1) {
+      const y = Array.isArray(data[i]) ? Number(data[i][1]) : Number(data[i]);
+      if (Number.isFinite(y)) {
+        count += 1;
+        sum += y;
+        if (y > max) max = y;
+      }
+    }
+    let last = null;
+    for (let i = data.length - 1; i >= 0; i -= 1) {
+      const y = Array.isArray(data[i]) ? Number(data[i][1]) : Number(data[i]);
+      if (Number.isFinite(y)) { last = y; break; }
+    }
+    stats[s.name] = {
+      mean: count > 0 ? (sum / count) : null,
+      max: count > 0 ? max : null,
+      last: last,
+    };
+  }
+  return stats;
+}
+
+// Grafana-like classic color palette
+const grafanaPalette = [
+  '#7EB26D', '#EAB839', '#6ED0E0', '#EF843C', '#E24D42', '#1F78C1', '#BA43A9', '#705DA0',
+  '#508642', '#CCA300', '#447EBC', '#C15C17', '#890F02', '#0A437C', '#6D1F62', '#584477',
+  '#B7DBAB', '#F4D598', '#70DBED', '#F9BA8F', '#F29191', '#82B5D8', '#E5A8E2', '#AEA2E0'
+];
+
 function setNowRange(preset) {
   const now = new Date();
   let start = new Date(now);
@@ -77,17 +122,75 @@ function labelFromMetric(metricObj) {
 }
 
 function renderSeries(seriesList, title = '') {
+  currentLegendStats = computeLegendStats(seriesList);
   const option = {
     title: { text: title },
     tooltip: { trigger: 'axis', axisPointer: { type: 'line' } },
     grid: { left: 48, right: 24, top: 48, bottom: 48 },
     xAxis: { type: 'time' },
     yAxis: { type: 'value', scale: true },
-    legend: { type: 'scroll' },
+    legend: {
+      type: 'scroll',
+      formatter: function(name) {
+        const s = currentLegendStats && currentLegendStats[name];
+        if (!s) return name;
+        return `${name}  [last=${formatStatNumber(s.last)}  max=${formatStatNumber(s.max)}  mean=${formatStatNumber(s.mean)}]`;
+      }
+    },
+    color: grafanaPalette,
     series: seriesList,
   };
   const c = ensureChart();
   if (c) c.setOption(option);
+}
+
+// Add: download current chart image
+const downloadBtn = document.getElementById('downloadBtn');
+const getUrlBtn = document.getElementById('getUrlBtn');
+const downloadUrlInput = document.getElementById('downloadUrlInput');
+const downloadUrlLink = document.getElementById('downloadUrlLink');
+function getChartDataUrl(format = 'png') {
+  const c = ensureChart();
+  if (!c) return null;
+  return c.getDataURL({
+    type: format,
+    pixelRatio: 2,
+    backgroundColor: '#ffffff',
+    excludeComponents: [],
+  });
+}
+function downloadChart(format = 'png') {
+  const dataURL = getChartDataUrl(format);
+  if (!dataURL) return;
+  const link = document.createElement('a');
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  link.href = dataURL;
+  link.download = `chart-${ts}.${format}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+async function saveChartAndGetUrl(format = 'png') {
+  const dataURL = getChartDataUrl(format);
+  if (!dataURL) return;
+  const res = await fetch('/api/save-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl: dataURL })
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error || 'Failed to save image');
+  const url = json?.downloadUrl || json?.url;
+  if (url && downloadUrlInput) {
+    const full = `${location.origin}${url}`;
+    downloadUrlInput.value = full;
+    downloadUrlInput.focus();
+    downloadUrlInput.select();
+    if (downloadUrlLink) {
+      downloadUrlLink.href = full;
+      downloadUrlLink.style.display = '';
+    }
+  }
 }
 
 async function runPrometheus() {
@@ -219,6 +322,23 @@ runBtn.addEventListener('click', async () => {
   await run();
   setupAutoRefresh();
 });
+
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', () => downloadChart('png'));
+}
+if (getUrlBtn) {
+  getUrlBtn.addEventListener('click', async () => {
+    try {
+      getUrlBtn.disabled = true;
+      const prev = getUrlBtn.textContent;
+      getUrlBtn.textContent = 'Generating...';
+      await saveChartAndGetUrl('png');
+      getUrlBtn.textContent = prev;
+    } finally {
+      getUrlBtn.disabled = false;
+    }
+  });
+}
 
 refreshInput.addEventListener('change', setupAutoRefresh);
 

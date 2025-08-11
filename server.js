@@ -4,6 +4,9 @@ const path = require('path');
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const fs = require('fs');
+const fsp = require('fs').promises;
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -11,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 // Basic middleware
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Env config
 const PROMETHEUS_BASE_URL = process.env.PROMETHEUS_BASE_URL || '';
@@ -132,9 +135,63 @@ app.post('/api/clickhouse/query', async (req, res) => {
   }
 });
 
+// Save chart image and return URL
+app.post('/api/save-image', async (req, res) => {
+  try {
+    const dataUrl = req.body?.dataUrl;
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid dataUrl' });
+    }
+    const match = dataUrl.match(/^data:image\/(png|jpeg);base64,(.+)$/i);
+    if (!match) {
+      return res.status(400).json({ error: 'Only PNG or JPEG base64 data URLs are supported' });
+    }
+    const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+    const base64Part = match[2];
+
+    const buffer = Buffer.from(base64Part, 'base64');
+    const exportsDir = path.join(__dirname, 'public', 'exports');
+    await fsp.mkdir(exportsDir, { recursive: true });
+    const filename = `chart-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
+    const fullPath = path.join(exportsDir, filename);
+    await fsp.writeFile(fullPath, buffer);
+    const urlPath = `/exports/${filename}`;
+    const downloadPath = `/download/${filename}`;
+    res.json({ url: urlPath, downloadUrl: downloadPath });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save image', details: error.message });
+  }
+});
+
 // Static frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Download route to force attachment
+app.get('/download/:filename', (req, res) => {
+  try {
+    const filename = path.basename(req.params.filename || '');
+    if (!filename) return res.status(400).send('filename required');
+    const fullPath = path.join(__dirname, 'public', 'exports', filename);
+    if (!fs.existsSync(fullPath)) return res.status(404).send('Not found');
+    return res.download(fullPath, filename);
+  } catch (e) {
+    return res.status(500).send('Internal error');
+  }
 });
+
+const server = app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT} (pid=${process.pid})`);
+});
+
+function shutdown(signal) {
+  console.log(`Worker ${process.pid} received ${signal}. Closing server...`);
+  server.close(() => {
+    console.log(`Worker ${process.pid} closed. Exiting.`);
+    process.exit(0);
+  });
+  // Force exit if not closed in time
+  setTimeout(() => process.exit(1), 5000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

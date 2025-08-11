@@ -4,7 +4,8 @@
   "private": true,
   "description": "Simple web app using Apache ECharts to visualize Prometheus or ClickHouse data",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server.cluster.js",
+    "start:single": "node server.js",
     "dev": "nodemon --watch server.js --watch public server.js"
   },
   "dependencies": {
