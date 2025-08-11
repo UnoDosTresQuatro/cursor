@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ECharts Metrics Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1>ECharts Metrics Viewer</h1>
+      </header>
+
+      <section class="controls">
+        <div class="row">
+          <label for="sourceSelect">Source</label>
+          <select id="sourceSelect">
+            <option value="prometheus">Prometheus</option>
+            <option value="clickhouse">ClickHouse</option>
+          </select>
+
+          <label for="rangeSelect">Range</label>
+          <select id="rangeSelect">
+            <option value="1h">Last 1h</option>
+            <option value="6h">Last 6h</option>
+            <option value="24h">Last 24h</option>
+            <option value="2d">Last 2d</option>
+            <option value="7d">Last 7d</option>
+            <option value="custom">Custom</option>
+          </select>
+
+          <label for="stepInput">Step (s)</label>
+          <input id="stepInput" type="number" min="1" value="15" />
+
+          <label for="refreshInput">Refresh (s)</label>
+          <input id="refreshInput" type="number" min="0" value="0" />
+
+          <button id="runBtn">Run</button>
+        </div>
+
+        <div class="row" id="timeRow" style="display:none">
+          <label for="startInput">Start</label>
+          <input id="startInput" type="datetime-local" />
+          <label for="endInput">End</label>
+          <input id="endInput" type="datetime-local" />
+        </div>
+
+        <div class="row">
+          <label id="queryLabel" for="queryInput">PromQL</label>
+          <textarea id="queryInput" rows="3" placeholder="up"></textarea>
+        </div>
+      </section>
+
+      <section class="chart-section">
+        <div id="chart" class="chart"></div>
+      </section>
+
+      <footer>
+        <span>Powered by Apache ECharts</span>
+      </footer>
+    </div>
+
+    <script src="/main.js"></script>
+  </body>
+</html>
