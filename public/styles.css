@@ -1,0 +1,20 @@
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; padding: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+
+.app { display: flex; flex-direction: column; height: 100%; }
+header, footer { padding: 8px 12px; background: #111827; color: #e5e7eb; }
+header h1 { margin: 0; font-size: 18px; }
+footer { font-size: 12px; }
+
+.controls { padding: 12px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; }
+.controls .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.controls label { font-weight: 600; }
+.controls input[type="number"],
+.controls input[type="datetime-local"],
+.controls select { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+.controls textarea { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.controls button { padding: 8px 12px; border: 0; background: #2563eb; color: white; border-radius: 6px; cursor: pointer; }
+.controls button:hover { background: #1d4ed8; }
+
+.chart-section { flex: 1; min-height: 0; }
+.chart { width: 100%; height: calc(100vh - 220px); }
