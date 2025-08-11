@@ -120,34 +120,13 @@ function groupRowsBySeries(rows) {
   for (const row of rows) {
     const time = row.t ?? row.time ?? row.ts ?? row.timestamp;
     if (time == null) continue;
-    const tMillis = typeof time === 'number' ? time : Number(time);
+    const tMillis = typeof time === 'number' ? time : Date.parse(time);
 
-    const entries = Object.entries(row);
-
-    if (row.series != null && row.value != null) {
-      const seriesName = String(row.series);
+    if (row.value != null && String(row.status) !== "all") {
+      const seriesName = String(`{host=${row.host},request=${row.request},status=${row.status}}`);
       const value = Number(row.value);
       if (!groups.has(seriesName)) groups.set(seriesName, []);
       groups.get(seriesName).push([tMillis, value]);
-      continue;
-    }
-
-    const scalarKeys = entries
-      .filter(([k, v]) => k !== 't' && k !== 'time' && k !== 'ts' && k !== 'timestamp' && typeof v === 'number')
-      .map(([k]) => k);
-
-    if (scalarKeys.length === 0) {
-      const value = Number(row.value ?? row.v ?? 0);
-      const name = String(row.name ?? 'value');
-      if (!groups.has(name)) groups.set(name, []);
-      groups.get(name).push([tMillis, value]);
-    } else {
-      for (const key of scalarKeys) {
-        const value = Number(row[key]);
-        const seriesName = String(key);
-        if (!groups.has(seriesName)) groups.set(seriesName, []);
-        groups.get(seriesName).push([tMillis, value]);
-      }
     }
   }
   return Array.from(groups.entries()).map(([name, data]) => ({ name, data: data.sort((a,b)=>a[0]-b[0]) }));
@@ -232,24 +211,6 @@ function setupAutoRefresh() {
   }
 }
 
-// Event listeners
-function interceptSelectProgrammaticChanges(select, onChange) {
-  const valueDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
-  const indexDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
-  try {
-    Object.defineProperty(select, 'value', {
-      get() { return valueDesc.get.call(this); },
-      set(v) { valueDesc.set.call(this, v); onChange(); },
-      configurable: true,
-    });
-    Object.defineProperty(select, 'selectedIndex', {
-      get() { return indexDesc.get.call(this); },
-      set(v) { indexDesc.set.call(this, v); onChange(); },
-      configurable: true,
-    });
-  } catch {}
-}
-interceptSelectProgrammaticChanges(sourceSelect, () => requestAnimationFrame(updateUiForSource));
 
 sourceSelect.addEventListener('change', updateUiForSource);
 sourceSelect.addEventListener('input', updateUiForSource);
