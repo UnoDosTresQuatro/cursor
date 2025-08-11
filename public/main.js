@@ -320,6 +320,19 @@ runBtn.addEventListener('click', async () => {
 if (downloadBtn) {
   downloadBtn.addEventListener('click', () => downloadChart('png'));
 }
+if (getUrlBtn) {
+  getUrlBtn.addEventListener('click', async () => {
+    try {
+      getUrlBtn.disabled = true;
+      const prev = getUrlBtn.textContent;
+      getUrlBtn.textContent = 'Generating...';
+      await saveChartAndGetUrl('png');
+      getUrlBtn.textContent = prev;
+    } finally {
+      getUrlBtn.disabled = false;
+    }
+  });
+}
 
 refreshInput.addEventListener('change', setupAutoRefresh);
 
