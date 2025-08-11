@@ -185,12 +185,14 @@ async function runClickHouse() {
 function updateUiForSource() {
   if (sourceSelect.value === 'prometheus') {
     queryLabel.textContent = 'PromQL';
+    queryLabel.title = queryLabel.textContent;
     if (!queryInput.value || queryInput.value.trim().toLowerCase() === 'select 1') {
       queryInput.value = 'up';
     }
     stepInput.disabled = false;
   } else {
     queryLabel.textContent = 'ClickHouse SQL';
+    queryLabel.title = queryLabel.textContent;
     if (!queryInput.value || queryInput.value.trim().toLowerCase() === 'up') {
       queryInput.value = `-- Example: rows with columns t (ms), value, series\nSELECT\n  toUnixTimestamp64Milli(ts) AS t,\n  value,\n  'seriesA' AS series\nFROM some_metrics\nWHERE ts BETWEEN toDateTime64({{start}}/1000, 3) AND toDateTime64({{end}}/1000, 3)\nORDER BY ts`;
     }
@@ -247,7 +249,7 @@ function interceptSelectProgrammaticChanges(select, onChange) {
     });
   } catch {}
 }
-interceptSelectProgrammaticChanges(sourceSelect, updateUiForSource);
+interceptSelectProgrammaticChanges(sourceSelect, () => requestAnimationFrame(updateUiForSource));
 
 sourceSelect.addEventListener('change', updateUiForSource);
 sourceSelect.addEventListener('input', updateUiForSource);
