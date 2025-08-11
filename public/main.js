@@ -148,6 +148,7 @@ function renderSeries(seriesList, title = '') {
 const downloadBtn = document.getElementById('downloadBtn');
 const getUrlBtn = document.getElementById('getUrlBtn');
 const downloadUrlInput = document.getElementById('downloadUrlInput');
+const downloadUrlLink = document.getElementById('downloadUrlLink');
 function getChartDataUrl(format = 'png') {
   const c = ensureChart();
   if (!c) return null;
@@ -179,11 +180,16 @@ async function saveChartAndGetUrl(format = 'png') {
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json?.error || 'Failed to save image');
-  const url = json?.url;
+  const url = json?.downloadUrl || json?.url;
   if (url && downloadUrlInput) {
-    downloadUrlInput.value = `${location.origin}${url}`;
+    const full = `${location.origin}${url}`;
+    downloadUrlInput.value = full;
     downloadUrlInput.focus();
     downloadUrlInput.select();
+    if (downloadUrlLink) {
+      downloadUrlLink.href = full;
+      downloadUrlLink.style.display = '';
+    }
   }
 }
 

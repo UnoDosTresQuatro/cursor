@@ -156,7 +156,8 @@ app.post('/api/save-image', async (req, res) => {
     const fullPath = path.join(exportsDir, filename);
     await fsp.writeFile(fullPath, buffer);
     const urlPath = `/exports/${filename}`;
-    res.json({ url: urlPath });
+    const downloadPath = `/download/${filename}`;
+    res.json({ url: urlPath, downloadUrl: downloadPath });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save image', details: error.message });
   }
@@ -164,6 +165,19 @@ app.post('/api/save-image', async (req, res) => {
 
 // Static frontend
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Download route to force attachment
+app.get('/download/:filename', (req, res) => {
+  try {
+    const filename = path.basename(req.params.filename || '');
+    if (!filename) return res.status(400).send('filename required');
+    const fullPath = path.join(__dirname, 'public', 'exports', filename);
+    if (!fs.existsSync(fullPath)) return res.status(404).send('Not found');
+    return res.download(fullPath, filename);
+  } catch (e) {
+    return res.status(500).send('Internal error');
+  }
+});
 
 const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT} (pid=${process.pid})`);
