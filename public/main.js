@@ -146,15 +146,21 @@ function renderSeries(seriesList, title = '') {
 
 // Add: download current chart image
 const downloadBtn = document.getElementById('downloadBtn');
-function downloadChart(format = 'png') {
+const getUrlBtn = document.getElementById('getUrlBtn');
+const downloadUrlInput = document.getElementById('downloadUrlInput');
+function getChartDataUrl(format = 'png') {
   const c = ensureChart();
-  if (!c) return;
-  const dataURL = c.getDataURL({
+  if (!c) return null;
+  return c.getDataURL({
     type: format,
     pixelRatio: 2,
     backgroundColor: '#ffffff',
     excludeComponents: [],
   });
+}
+function downloadChart(format = 'png') {
+  const dataURL = getChartDataUrl(format);
+  if (!dataURL) return;
   const link = document.createElement('a');
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
   link.href = dataURL;
@@ -162,6 +168,23 @@ function downloadChart(format = 'png') {
   document.body.appendChild(link);
   link.click();
   link.remove();
+}
+async function saveChartAndGetUrl(format = 'png') {
+  const dataURL = getChartDataUrl(format);
+  if (!dataURL) return;
+  const res = await fetch('/api/save-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl: dataURL })
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error || 'Failed to save image');
+  const url = json?.url;
+  if (url && downloadUrlInput) {
+    downloadUrlInput.value = `${location.origin}${url}`;
+    downloadUrlInput.focus();
+    downloadUrlInput.select();
+  }
 }
 
 async function runPrometheus() {

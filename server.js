@@ -4,6 +4,9 @@ const path = require('path');
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const fs = require('fs');
+const fsp = require('fs').promises;
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
@@ -11,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 // Basic middleware
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // Env config
 const PROMETHEUS_BASE_URL = process.env.PROMETHEUS_BASE_URL || '';
@@ -129,6 +132,33 @@ app.post('/api/clickhouse/query', async (req, res) => {
       error: `ClickHouse query failed with status ${status}`,
       details: error.response?.data || error.message,
     });
+  }
+});
+
+// Save chart image and return URL
+app.post('/api/save-image', async (req, res) => {
+  try {
+    const dataUrl = req.body?.dataUrl;
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Invalid dataUrl' });
+    }
+    const match = dataUrl.match(/^data:image\/(png|jpeg);base64,(.+)$/i);
+    if (!match) {
+      return res.status(400).json({ error: 'Only PNG or JPEG base64 data URLs are supported' });
+    }
+    const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
+    const base64Part = match[2];
+
+    const buffer = Buffer.from(base64Part, 'base64');
+    const exportsDir = path.join(__dirname, 'public', 'exports');
+    await fsp.mkdir(exportsDir, { recursive: true });
+    const filename = `chart-${Date.now()}-${crypto.randomBytes(6).toString('hex')}.${ext}`;
+    const fullPath = path.join(exportsDir, filename);
+    await fsp.writeFile(fullPath, buffer);
+    const urlPath = `/exports/${filename}`;
+    res.json({ url: urlPath });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save image', details: error.message });
   }
 });
 
