@@ -141,27 +141,11 @@ function renderSeries(seriesList, title = '') {
     series: seriesList,
   };
   const c = ensureChart();
-  if (c) {
-    c.setOption(option);
-    try {
-      const dataURL = c.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' });
-      const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      updateDownloadLink(dataURL, `chart-${ts}.png`);
-    } catch (e) {
-      // ignore
-    }
-  }
+  if (c) c.setOption(option);
 }
 
 // Add: download current chart image
 const downloadBtn = document.getElementById('downloadBtn');
-const downloadLink = document.getElementById('downloadLink');
-function updateDownloadLink(dataURL, filename) {
-  if (!downloadLink) return;
-  downloadLink.href = dataURL;
-  downloadLink.download = filename;
-  downloadLink.style.display = '';
-}
 function downloadChart(format = 'png') {
   const c = ensureChart();
   if (!c) return;
@@ -173,13 +157,11 @@ function downloadChart(format = 'png') {
   });
   const link = document.createElement('a');
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `chart-${ts}.${format}`;
   link.href = dataURL;
-  link.download = filename;
+  link.download = `chart-${ts}.${format}`;
   document.body.appendChild(link);
   link.click();
   link.remove();
-  updateDownloadLink(dataURL, filename);
 }
 
 async function runPrometheus() {
