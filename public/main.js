@@ -115,13 +115,21 @@ function labelFromMetric(metricObj) {
 }
 
 function renderSeries(seriesList, title = '') {
+  currentLegendStats = computeLegendStats(seriesList);
   const option = {
     title: { text: title },
     tooltip: { trigger: 'axis', axisPointer: { type: 'line' } },
     grid: { left: 48, right: 24, top: 48, bottom: 48 },
     xAxis: { type: 'time' },
     yAxis: { type: 'value', scale: true },
-    legend: { type: 'scroll' },
+    legend: {
+      type: 'scroll',
+      formatter: function(name) {
+        const s = currentLegendStats && currentLegendStats[name];
+        if (!s) return name;
+        return `${name}  [last=${formatStatNumber(s.last)}  max=${formatStatNumber(s.max)}  mean=${formatStatNumber(s.mean)}]`;
+      }
+    },
     series: seriesList,
   };
   const c = ensureChart();
