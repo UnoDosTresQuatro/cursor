@@ -135,6 +135,19 @@ app.post('/api/clickhouse/query', async (req, res) => {
 // Static frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT} (pid=${process.pid})`);
 });
+
+function shutdown(signal) {
+  console.log(`Worker ${process.pid} received ${signal}. Closing server...`);
+  server.close(() => {
+    console.log(`Worker ${process.pid} closed. Exiting.`);
+    process.exit(0);
+  });
+  // Force exit if not closed in time
+  setTimeout(() => process.exit(1), 5000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
